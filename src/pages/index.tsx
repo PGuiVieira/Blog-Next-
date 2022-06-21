@@ -90,7 +90,15 @@ export default function Home({ postsPagination }: HomeProps) {
                         <FiCalendar />
                         <time>
                           {format(
-                            new Date(post.first_publication_date),
+                            new Date(
+                              format(
+                                new Date(post.first_publication_date),
+                                'dd/MMM/yyyy',
+                                {
+                                  locale: ptBR,
+                                }
+                              )
+                            ),
                             'dd MMM yyyy',
                             {
                               locale: ptBR,
@@ -129,13 +137,7 @@ export const getStaticProps: GetStaticProps = async req => {
     results: response.results.map(post => {
       return {
         uid: post.uid,
-        first_publication_date: format(
-          new Date(post.first_publication_date),
-          'dd/MMM/yyyy',
-          {
-            locale: ptBR,
-          }
-        ),
+        first_publication_date: post.first_publication_date,
         data: {
           title: post.data.title,
           subtitle: post.data.subtitle,

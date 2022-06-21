@@ -36,26 +36,6 @@ export default function Post({ post }: PostProps) {
   if (router.isFallback) {
     return <p>Carregando...</p>;
   }
-  const bodyP = post.data.content.map(p => p.body.map(w => w.text));
-  const numberPBody = bodyP.join();
-  const numberKeys = numberPBody.split(' ');
-
-  const numberOfWordHeading = post.data.content
-    .map(p => p.heading)
-    .join()
-    .split(' ');
-
-  const numberOfWordBody = post.data.content
-    .map(p => p.body.map(w => w.text))
-    .join()
-    .split(' ');
-
-  const totalTime = (
-    (numberOfWordHeading.length + numberOfWordBody.length) /
-    200
-  ).toFixed(0);
-
-  console.log(numberOfWordHeading.length + numberOfWordBody.length);
 
   return (
     <div className={commonStyles.Container}>
@@ -79,20 +59,36 @@ export default function Post({ post }: PostProps) {
             </span>
             <span>
               <FiClock />
-              {
-                post.data.content.reduce((acumulador, currentValue) => acumulador + 2 , 0);
-              }
+              {Math.ceil(
+                post.data.content.reduce(function Calc(
+                  acc,
+                  currentValue,
+                  index,
+                  array
+                ) {
+                  acc +=
+                    currentValue.body
+                      .map(bodyM => bodyM.text)
+                      .join()
+                      .split(/\s/g).length +
+                    (currentValue.heading
+                      ? currentValue.heading.split(/\s/g).length
+                      : 0);
+                  return acc;
+                },
+                0) / 200
+              )}{' '}
+              min
             </span>
           </div>
           {post.data.content.map(Content => {
             return (
               <section>
                 <h2>{Content.heading}</h2>
-                {RichText.render(Content.body)}
+                {Content.body.map(bodyM => ` ${bodyM.text}  `)}
               </section>
             );
           })}
-          <div>oi</div>
         </main>
       </div>
     </div>
@@ -102,9 +98,12 @@ export default function Post({ post }: PostProps) {
 export const getStaticPaths: GetStaticPaths = async () => {
   const prismic = getPrismicClient({});
   const posts = await prismic.getByType('post-id');
+  const path = posts.results.map(p => {
+    return { params: { slug: p.slugs && p.slugs.map(p => p).toString() } };
+  });
 
   return {
-    paths: [],
+    paths: path,
     fallback: 'blocking',
   };
 };
@@ -114,7 +113,24 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   const prismic = getPrismicClient({});
   const response = await prismic.getByUID('post-id', String(slug));
 
-  const post = response;
+  const post = {
+    first_publication_date: response.first_publication_date,
+    data: {
+      title: response.data.title,
+      banner: {
+        url: response.data.banner.url,
+      },
+      author: response.data.author,
+      content: response.data.content.map(contentResponse => {
+        return {
+          heading: contentResponse.heading,
+          body: contentResponse.body.map(bodyM => {
+            return { text: bodyM.text };
+          }),
+        };
+      }),
+    },
+  };
 
   return {
     props: { post },
